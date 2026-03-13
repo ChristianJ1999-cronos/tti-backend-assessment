@@ -124,7 +124,7 @@ GET /api/patients/1/summary?instrument_id=1
 
 ## Design Decisions
 
-**Used a schema of 5 tables** - Patients, Instruments, Questions, Submissions, and Answers are seperated. Adding the Questions and Answers table for better structure and seperation. Making the Submissions table a tracker for when the instrument was submitted, the Questions table is used to be able to save the questions for every Instrument as well as the type of question (scale_1_5, yes_no, free_text), and the Answer table becoming all the answers which patients submitted saved in this table. Doin so allows for different Instruments to have different amount of questions as well as multiple submissions per day and being able to track with questions belong to what submission. 
+**Used a schema of 5 tables** - Patients, Instruments, Questions, Submissions, and Answers are separated. Adding the Questions and Answers table for better structure and separation. Making the Submissions table a tracker for when the instrument was submitted, the Questions table is used to be able to save the questions for every Instrument as well as the type of question (scale_1_5, yes_no, free_text), and the Answer table becoming all the answers which patients submitted saved in this table. Doing so allows for different Instruments to have different amount of questions as well as multiple submissions per day and being able to track with questions belong to what submission. 
 
 **Custom AllQuestionsAnswered validation rule** — Ensures every question in the instrument is answered before a submission is accepted. This runs at the Form Request layer so the controller stays clean.
 
@@ -134,7 +134,7 @@ GET /api/patients/1/summary?instrument_id=1
 
 **Eloquent Resources for all responses** — Consistent JSON structure throughout all endpoints.
 
-**RefreshDatabase in tests** - Each test is ran against a clean database state using in-memory SQLite-compatible migrations so tests are submitted and deleted right after to keep database clean from dummy data.
+**RefreshDatabase in tests** - Each test is ran against a clean database state hence tests are submitted and deleted right after to keep database clean from dummy data.
 
 
 ## What I would improve with more time

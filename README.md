@@ -1,97 +1,145 @@
-# TTI Backend Engineer Assessment
+# Patient Reported Outcomes (PRO) API
 
-## Patient Reported Outcomes (PRO) API
+---
 
-### Overview
+## Requirements
 
-Build a RESTful API that allows patients to submit and retrieve Patient Reported Outcomes (PROs); structured symptom and quality-of-life reports tied to their treatment. This exercise reflects the kind of work you would do on the Wave Health platform.
+- PHP 8.4+
+- Composer
+- MySQL 8+
+- Or: Docker + Docker Compose
 
-**Time expectation:** 3–4 hours. We respect your time. Focus on quality over quantity. A well-architected subset is better than a rushed complete solution.
+---
 
-**Stack:** PHP 8.4+, Laravel 11+, MySQL 8+
+## Local Setup (NOT using Docker)
 
-### Background
+**1. Clone and install dependencies**
+```bash
+git clone https://github.com/ChristianJ1999-cronos/tti-backend-assessment.git
+cd tti-backend-assessment
+composer install
+```
 
-Wave Health helps patients with chronic conditions track their treatment experiences. Patients periodically complete questionnaires (called "instruments") that capture symptoms, side effects, and quality of life. Clinicians use this data to monitor patients remotely.
+**2. Configure the environment**
+```bash
+cp .env.example  .env
+php artisan key:generate
+```
 
-### Requirements
+**3. Update `.env` with your database credentials**
+```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=tti_assessment
+DB_USERNAME=root
+DB_PASSWORD=your_password
+```
 
-#### Data Model
+**4. Run migrations and seed sample data**
+```bash
+php artisan migrate:fresh --seed
+```
 
-Design and implement a schema to support the following:
+**5. Start the server**
+```bash
+php artisan serve
+```
+API is available at 'http://127.0.0.1:8000'
 
-- **Patients** — A patient has a name, date of birth, and a medical record number (MRN)
-- **Instruments** — A questionnaire template with a title, description, and a set of ordered questions. Each question has a prompt and a response type (one of: `scale_1_5`, `yes_no`, `free_text`)
-- **Submissions** — A completed instance of an instrument by a patient at a specific date/time, containing the patient's answers to each question
+---
 
-#### API Endpoints
+### Local Setup (USING Docker)
+```bash
+cp .env.example  .env
+docker-compose up --build -d
+docker-compose exec app php artisan key:generate
+docker-compose exec app php artisan migrate:fresh --seed
+```
 
-Implement the following endpoints:
+API is available at 'http://localhost:8000'
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/patients` | Create a new patient |
-| `POST` | `/api/instruments` | Create a new instrument with questions |
-| `POST` | `/api/patients/{id}/submissions` | Submit a completed instrument for a patient |
-| `GET` | `/api/patients/{id}/submissions` | List all submissions for a patient (paginated, newest first) |
-| `GET` | `/api/patients/{id}/submissions/{id}` | Get a single submission with all answers |
-| `GET` | `/api/patients/{id}/summary` | Aggregate summary (see below) |
+---
 
-#### Summary Endpoint
+## Running Tests
+```bash
+composer test
+```
 
-`GET /api/patients/{id}/summary?instrument_id={id}`
+---
 
-Returns an aggregated view of a patient's responses to a specific instrument over time:
+## API Endpoints
 
-- For `scale_1_5` questions: return the **average score** across all submissions
-- For `yes_no` questions: return the **percentage of "yes" responses**
-- For `free_text` questions: return the **count of submissions** with a non-empty response
-- Include the **total number of submissions** and the **date range** (earliest to latest)
+Method | Endpoint                                               | Description
+POST   | 'api/patients'                                         | Create a new patient
+POST   | 'api/instruments'                                      | Create a new instrument with questions
+POST   | 'api/patients/{patientId}/submissions'                 | Submit a completed instrument for a patient
+GET    | 'api/patients/{patientId}/submissions'                 | List all submissions (paginated, newest first)
+GET    | 'api/patients/{patientId}/submissions/{submissionID}'  | Get one single submission with all the answers
+GET    | 'api/patients/{patientId}/summary'                     | Summary of total of stats
 
-#### Validation Rules
+## Creating a patient
+```json
+POST /api/patients
+{
+    "name": "Bruca Banner",
+    "date_of_birth": "1998-08-15",
+    "mrn": "MRN-001"
+}
+```
 
-- Submissions must reference a valid patient and instrument
-- All questions in the instrument must be answered
-- Answers must match the question's response type:
-  - `scale_1_5`: integer between 1 and 5
-  - `yes_no`: boolean
-  - `free_text`: string (may be empty)
-- MRN must be unique across patients
-- Return appropriate error responses with clear messages
+### Example: Create an Instrument
+```json
+POST /api/instruments
+{
+    "title": "Pain Assessment",
+    "description": "Daily pain tracking",
+    "questions": [
+        { "prompt": "Rate your pain", "response_type": "scale_1_5", "order": 1 },
+        { "prompt": "Any nausea?", "response_type": "yes_no", "order": 2 },
+        { "prompt": "How is your appetite?", "response_type": "free_text", "order": 3 }
+    ]
+}
+```
 
-### What We're Evaluating
+### Example: Submit an Instrument
+```json
+POST /api/patients/1/submissions
+{
+    "instrument_id": 1,
+    "answers": [
+        { "question_id": 1, "value": 3 },
+        { "question_id": 2, "value": true },
+        { "question_id": 3, "value": "I have been able to eat more everyday." }
+    ]
+}
+```
 
-| Area | What We're Looking For |
-|------|----------------------|
-| **Database Design** | Normalized schema, appropriate indexes, well-thought-out relationships and migrations |
-| **API Design** | RESTful conventions, consistent response structures, proper HTTP status codes |
-| **Laravel Proficiency** | Effective use of Eloquent, Form Requests, Resources, and other Laravel patterns |
-| **Validation & Error Handling** | Robust input validation, graceful error responses, edge case handling |
-| **Code Quality** | Clean, readable code with clear naming, separation of concerns, and SOLID principles |
-| **Security Awareness** | Consideration for data sensitivity; mass assignment protection, input sanitization, etc. |
+### Example: Get Summary
+```
+GET /api/patients/1/summary?instrument_id=1
+```
 
-### Bonus (Not Required)
+---
 
-- Automated tests (Feature or Unit) for key endpoints
-- API documentation (e.g., OpenAPI/Swagger or a simple markdown doc)
-- Docker Compose setup for local development
-- Rate limiting or authentication scaffolding
-- Any performance considerations (query optimization, eager loading, caching)
+## Design Decisions
 
-### Submission Instructions
+**Used a schema of 5 tables** - Patients, Instruments, Questions, Submissions, and Answers are seperated. Adding the Questions and Answers table for better structure and seperation. Making the Submissions table a tracker for when the instrument was submitted, the Questions table is used to be able to save the questions for every Instrument as well as the type of question (scale_1_5, yes_no, free_text), and the Answer table becoming all the answers which patients submitted saved in this table. Doin so allows for different Instruments to have different amount of questions as well as multiple submissions per day and being able to track with questions belong to what submission. 
 
-1. **Fork** the repository
-2. Complete the exercise on a feature branch
-3. Open a **Pull Request** back to the original repository with:
-   - A clear PR description summarizing your approach
-   - A `README.md` that includes:
-     - Setup instructions (we should be able to run it locally)
-     - Any design decisions or trade-offs you made
-     - What you would improve or add with more time
-4. Include database migrations and a seeder with sample data
+**Custom AllQuestionsAnswered validation rule** — Ensures every question in the instrument is answered before a submission is accepted. This runs at the Form Request layer so the controller stays clean.
 
-### Notes
+**Per-question dynamic validation** — Answer values are validated against their question's response_type at submission time. scale_1_5 enforces integer 1-5, yes_no enforces boolean, free_text allows empty strings.
 
-- This is a simplified version of a real domain we work in. Don't overthink it — we want to see how you approach the problem, not a production-ready system.
-- If you have questions or need clarification, email armando@tti.care. Asking good questions is a positive signal.
-- We will review your submission before the technical interview and use it as a starting point for discussion. Be prepared to walk through your design decisions and talk about how you'd extend it.
+**DB::transaction on submission creation** — The submission record and all answer records are created atomically. If any answer fails to save, the entire submission is rolled back.
+
+**Eloquent Resources for all responses** — Consistent JSON structure throughout all endpoints.
+
+**RefreshDatabase in tests** - Each test is ran against a clean database state using in-memory SQLite-compatible migrations so tests are submitted and deleted right after to keep database clean from dummy data.
+
+
+## What I would improve with more time
+
+- Add profiles/authentication to have seemless access of information for the patient or the doctor.
+- Creating more Instruments with more questions.
+- Incorporate more test cases: ensuring unique value enforces only one unique value, making sure unique ids are working perfectly.
+- Add eager loading specifically on the submissions list endpoint. Especially if answers are ever included in the list response. This would avoid having a N+1 query.
